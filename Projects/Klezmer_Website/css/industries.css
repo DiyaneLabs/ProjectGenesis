@@ -19,7 +19,7 @@
                 rgba(8, 18, 35, 0.95),
                 rgba(8, 18, 35, 0.70),
                 rgba(8, 18, 35, 0.30)),
-            url("../images/industries-bg.jpg");
+            url("../assets/images/industries-bg.jpg");
     
         background-size: cover;
     
@@ -87,7 +87,7 @@
     margin: 0 0 35px;
     font-size: 80px;
     line-height: .94;
-    letter-spacing: -0.055em;
+    letter-spacing: -0.046em;
     font-weight: 800;
     max-width: 1000px; 
     color: #ffffff;
@@ -158,7 +158,7 @@
 }
 
 
-.industries-heading h2 span {
+/* .industries-heading h2 span {
 
     display: block;
 
@@ -173,7 +173,7 @@
 
     -webkit-text-fill-color: transparent;
 
-}
+} */
 
 .industries-grid {
 

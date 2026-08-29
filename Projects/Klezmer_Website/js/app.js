@@ -6,47 +6,47 @@ if (yearElement) {
 
 const industryData = {
 
-    financial: {
+    government: {
 
         number: "01",
 
-        title: "Financial Services",
+        title: "Government & Public Sector",
 
         description:
-            "Secure, resilient and dependable technology environments for organisations where performance, availability and security are critical."
+            "Secure connectivity, infrastructure modernisation, managed services, digital platforms and reporting designed around public-service environments, distributed sites and accountable delivery."
 
     },
 
-    professional: {
+    small_med_business: {
 
         number: "02",
 
-        title: "Professional Services",
+        title: "Small & Medium-Sized Businesses",
 
         description:
-            "Reliable technology environments that help professional teams collaborate, protect information and maintain productive operations."
-
-    },
-
-    healthcare: {
-
-        number: "03",
-
-        title: "Healthcare",
-
-        description:
-            "Secure and dependable technology designed to support availability, connectivity and the protection of critical information."
+            "Practical IT capability that helps growing organisations improve security, user support, cloud adoption and technology planning without unnecessary complexity."
 
     },
 
     education: {
 
-        number: "04",
+        number: "03",
 
-        title: "Education",
+        title: "Education & Training",
 
         description:
-            "Connected technology environments that support learning, collaboration, administration and secure access to digital resources."
+            "Connectivity, user access, digital learning platforms, device support and secure infrastructure for institutions serving students, educators and administrators."
+
+    },
+
+    professional: {
+
+        number: "04",
+
+        title: "Professional Services",
+
+        description:
+            "Secure collaboration, cloud, communications, continuity and user support for organisations whose reputation depends on availability and information protection."
 
     },
 
@@ -54,23 +54,12 @@ const industryData = {
 
         number: "05",
 
-        title: "Retail & Commerce",
+        title: "Retail & Multi-Site Operations",
 
         description:
-            "Scalable technology solutions that help organisations maintain reliable operations, connected teams and secure customer experiences."
+            "Resilient connectivity, central visibility, endpoint support and communication services across branches, outlets and distributed teams."
 
     },
-
-    business: {
-
-        number: "06",
-
-        title: "Growing Businesses",
-
-        description:
-            "Flexible technology foundations that allow growing organisations to scale securely without unnecessary complexity."
-
-    }
 
 };
 
@@ -138,3 +127,4 @@ industryButtons.forEach(button => {
     });
 
 });
+

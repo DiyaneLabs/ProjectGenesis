@@ -1,36 +1,42 @@
-const toggleButton = document.querySelector('.nav-toggle');
-const navLinks = document.querySelector('.nav-links');
+document.addEventListener("DOMContentLoaded", () => {
 
-function closeMenu() {
-  if (toggleButton) {
-    toggleButton.setAttribute('aria-expanded', 'false');
-  }
+    const navLinks = document.querySelectorAll(".nav-links a");
 
-  if (navLinks) {
-    navLinks.classList.remove('is-open');
-  }
-}
+    // Get the current page
+    let currentPage = window.location.pathname;
 
-if (toggleButton && navLinks) {
-  toggleButton.addEventListener('click', () => {
-    const isExpanded = toggleButton.getAttribute('aria-expanded') === 'true';
-    toggleButton.setAttribute('aria-expanded', String(!isExpanded));
-    navLinks.classList.toggle('is-open');
-  });
+    // Remove trailing slash
+    currentPage = currentPage.replace(/\/$/, "");
 
-  navLinks.querySelectorAll('a').forEach((link) => {
-    link.addEventListener('click', closeMenu);
-  });
-}
+    // Get just the filename
+    currentPage = currentPage.split("/").pop();
 
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape') {
-    closeMenu();
-  }
+    // If we're on the root/home page
+    if (currentPage === "") {
+        currentPage = "index.html";
+    }
+
+    navLinks.forEach(link => {
+
+        let linkPage = link.getAttribute("href");
+
+        // Remove any folders
+        linkPage = linkPage.split("/").pop();
+
+        // Remove #section if there is one
+        linkPage = linkPage.split("#")[0];
+
+        // Home link
+        if (linkPage === "" || linkPage === "index.html") {
+            linkPage = "index.html";
+        }
+
+        // Add active class
+        if (linkPage === currentPage) {
+            link.classList.add("active");
+        }
+
+    });
+
 });
 
-window.addEventListener('resize', () => {
-  if (window.innerWidth > 720) {
-    closeMenu();
-  }
-});

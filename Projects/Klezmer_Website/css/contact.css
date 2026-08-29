@@ -2,7 +2,7 @@
 
     position: relative;
 
-    padding: 35px 0 140px;
+    padding: 10px 0 35px;
 
     display: flex;
 
@@ -12,7 +12,7 @@
 
     align-items: center;
 
-    min-height: 630px;
+    min-height: 550px;
 
 }
 
@@ -39,7 +39,6 @@
             margin: 0 0 35px;
             font-size: 80px;
             line-height: .94;
-            letter-spacing: -0.055em;
             font-weight: 800;
             max-width: 1000px;
     
@@ -981,16 +980,13 @@
 
     line-height: 1;
 
-    letter-spacing: -0.05em;
-
 }
 
-
+/* 
 .contact-cta h2 .gradient-text {
 
-    display: block;
 
-}
+} */
 
 
 .contact-cta-content>p:not(.eyebrow) {
@@ -1384,3 +1380,12 @@
     }
 
 }
+.contact-eyebrow{
+        display: inline-block;
+        margin-bottom: 24px;
+        color: #1267e8;
+        font-size: 12px;
+        font-weight: 700;
+        letter-spacing: 0.22em;
+        text-transform: uppercase;
+    }
