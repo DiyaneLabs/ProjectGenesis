@@ -1,25 +1,121 @@
 const express = require("express");
 const nodemailer = require("nodemailer");
+const fs = require("fs");
+const path = require("path");
+const { ConfidentialClientApplication } = require("@azure/msal-node");
 
-require("dotenv").config();
+require("dotenv").config({
+    path: path.join(__dirname, ".env")
+});
 
 const app = express();
 
 const PORT = 3000;
 
 // ================================
-// EMAIL CONFIGURATION
+// MICROSOFT 365 OAUTH CONFIGURATION
 // ================================
-const transporter = nodemailer.createTransport({
 
-    service: "gmail",
+const CLIENT_ID = "0c5ecd35-643a-4869-9b4e-28c379dd364a";
+const TENANT_ID = "581ea70d-a955-416e-bc3c-6e4682e0cae4";
+
+const MAILBOX = "ntsikelelod@mabtechnologies.co.za";
+
+console.log("SMTP mailbox:", MAILBOX);
+
+const PRIVATE_KEY_PATH = path.join(
+    __dirname,
+    "..",
+    "Klezmer-SMTP-App-private-key.pem"
+);
+
+const privateKey = fs.readFileSync(
+    PRIVATE_KEY_PATH,
+    "utf8"
+);
+
+const cca = new ConfidentialClientApplication({
 
     auth: {
-        user: process.env.EMAIL_USER,
 
-        pass: process.env.EMAIL_APP_PASSWORD
+        clientId: CLIENT_ID,
+
+        authority:
+            `https://login.microsoftonline.com/${TENANT_ID}`,
+
+        clientCertificate: {
+
+            thumbprintSha256:
+                process.env.CERT_THUMBPRINT,
+
+            privateKey: privateKey
+
+        }
+
     }
+
 });
+
+
+// ================================
+// CREATE MICROSOFT 365 SMTP CONNECTION
+// ================================
+
+async function createTransporter() {
+
+    const tokenResponse =
+        await cca.acquireTokenByClientCredential({
+
+            scopes: [
+                "https://outlook.office365.com/.default"
+            ]
+
+        });
+
+
+    if (!tokenResponse?.accessToken) {
+
+        throw new Error(
+            "Microsoft 365 OAuth token was not received."
+        );
+
+    }
+
+    console.log("Website OAuth token received.");
+
+const tokenParts = tokenResponse.accessToken.split(".");
+
+const tokenPayload = JSON.parse(
+    Buffer.from(tokenParts[1], "base64url").toString("utf8")
+);
+
+console.log("Website token audience:", tokenPayload.aud);
+console.log("Website token app ID:", tokenPayload.appid);
+console.log("Website token roles:", tokenPayload.roles);
+
+
+    return nodemailer.createTransport({
+
+        host: "smtp.office365.com",
+
+        port: 587,
+
+        secure: false,
+
+        auth: {
+
+            type: "OAuth2",
+
+            user: MAILBOX,
+
+            accessToken:
+                tokenResponse.accessToken
+
+        }
+
+    });
+
+}
 
 // ================================
 // MIDDLEWARE
@@ -30,7 +126,7 @@ app.use(express.urlencoded({ extended: true }));
 app.use(express.json());
 
 // Serve Klezmer website
-app.use(express.static("../"));
+app.use(express.static(path.join(__dirname, "..")));
 
 // ================================
 // HOMEPAGE
@@ -38,7 +134,9 @@ app.use(express.static("../"));
 
 app.get("/", (req, res) => {
 
-    res.sendFile("index.html", { root: "../" });
+    res.sendFile(
+        path.join(__dirname, "..", "index.html")
+    );
 
 });
 
@@ -131,6 +229,8 @@ if (!full_name || !full_name.trim()) {
 // ================================   
 
 try {
+
+    const transporter = await createTransporter();
 
     await transporter.sendMail({
         from: `"Klezmer Website" <${process.env.EMAIL_USER}>`,

@@ -1,0 +1,8 @@
+{
+  "dependencies": {
+    "@azure/msal-node": "^6.0.0",
+    "dotenv": "^17.4.2",
+    "node-forge": "^1.4.0",
+    "nodemailer": "^9.0.6"
+  }
+}
