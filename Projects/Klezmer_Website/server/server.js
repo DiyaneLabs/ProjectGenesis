@@ -2,6 +2,8 @@ const express = require("express");
 const nodemailer = require("nodemailer");
 const fs = require("fs");
 const path = require("path");
+const rateLimit = require("express-rate-limit");
+const helmet = require("helmet");
 const { ConfidentialClientApplication } = require("@azure/msal-node");
 
 require("dotenv").config({
@@ -10,7 +12,26 @@ require("dotenv").config({
 
 const app = express();
 
+app.use(helmet());
+
+function escapeHtml(value) {
+    return String(value)
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+}
+
 const PORT = 3000;
+
+const contactLimiter = rateLimit({
+    windowMs: 15 * 60 * 1000, // 15 minutes
+    limit: 5, // Maximum 5 submissions per IP
+    standardHeaders: "draft-7",
+    legacyHeaders: false,
+    message: "Too many enquiries. Please try again later."
+});
 
 // ================================
 // MICROSOFT 365 OAUTH CONFIGURATION
@@ -19,9 +40,9 @@ const PORT = 3000;
 const CLIENT_ID = "0c5ecd35-643a-4869-9b4e-28c379dd364a";
 const TENANT_ID = "581ea70d-a955-416e-bc3c-6e4682e0cae4";
 
-const MAILBOX = "ntsikelelod@mabtechnologies.co.za";
+const MAILBOX = process.env.EMAIL_USER;
 
-console.log("SMTP mailbox:", MAILBOX);
+// console.log("SMTP mailbox:", MAILBOX);
 
 const PRIVATE_KEY_PATH = path.join(
     __dirname,
@@ -69,7 +90,6 @@ async function createTransporter() {
             scopes: [
                 "https://outlook.office365.com/.default"
             ]
-
         });
 
 
@@ -83,36 +103,16 @@ async function createTransporter() {
 
     console.log("Website OAuth token received.");
 
-const tokenParts = tokenResponse.accessToken.split(".");
-
-const tokenPayload = JSON.parse(
-    Buffer.from(tokenParts[1], "base64url").toString("utf8")
-);
-
-console.log("Website token audience:", tokenPayload.aud);
-console.log("Website token app ID:", tokenPayload.appid);
-console.log("Website token roles:", tokenPayload.roles);
-
-
     return nodemailer.createTransport({
-
         host: "smtp.office365.com",
-
         port: 587,
-
         secure: false,
-
         auth: {
-
             type: "OAuth2",
-
             user: MAILBOX,
-
-            accessToken:
-                tokenResponse.accessToken
+            accessToken: tokenResponse.accessToken
 
         }
-
     });
 
 }
@@ -121,9 +121,9 @@ console.log("Website token roles:", tokenPayload.roles);
 // MIDDLEWARE
 // ================================
 
-app.use(express.urlencoded({ extended: true }));
+app.use(express.urlencoded({ extended: true, limit: "10kb" }));
 
-app.use(express.json());
+app.use(express.json({ limit: "10kb" }));
 
 // Serve Klezmer website
 app.use(express.static(path.join(__dirname, "..")));
@@ -144,7 +144,7 @@ app.get("/", (req, res) => {
 // CONTACT FORM
 // ================================
 
-app.post("/contact", async (req, res) => {
+app.post("/contact", contactLimiter, async (req, res) => {
 
     const {
         full_name,
@@ -188,6 +188,86 @@ if (!full_name || !full_name.trim()) {
 
     }
 
+    const emailPattern = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (!emailPattern.test(work_email.trim())) {
+
+    return res.status(400).send(
+        "Please provide a valid email address."
+    );
+
+    }
+
+    if (full_name.trim().length > 100) {
+    return res.status(400).send(
+        "Full name is too long."
+    );
+}
+
+if (organisation.trim().length > 150) {
+    return res.status(400).send(
+        "Organisation name is too long."
+    );
+}
+
+if (work_email.trim().length > 254) {
+    return res.status(400).send(
+        "Email address is too long."
+    );
+}
+
+if (telephone && telephone.trim().length > 30) {
+    return res.status(400).send(
+        "Telephone number is too long."
+    );
+}
+
+if (service.trim().length > 100) {
+    return res.status(400).send(
+        "Service selection is too long."
+    );
+}
+
+if (contact_method.trim().length > 50) {
+    return res.status(400).send(
+        "Contact method is too long."
+    );
+}
+
+if (message.trim().length > 2000) {
+    return res.status(400).send(
+        "Message is too long."
+    );
+}
+
+const allowedServices = [
+    "consulting",
+    "managed-it",
+    "network",
+    "cloud",
+    "cybersecurity",
+    "backup",
+    "voip",
+    "digital-platforms",
+    "other"
+];
+
+if (!allowedServices.includes(service)) {
+    return res.status(400).send(
+        "Invalid service selection."
+    );
+}
+
+const allowedContactMethods = [
+    "email",
+    "telephone"
+];
+
+if (!allowedContactMethods.includes(contact_method)) {
+    return res.status(400).send(
+        "Invalid contact method."
+    );
+}
 
     if (!service) {
 
@@ -233,9 +313,9 @@ try {
     const transporter = await createTransporter();
 
     await transporter.sendMail({
-        from: `"Klezmer Website" <${process.env.EMAIL_USER}>`,
+        from: `"Klezmer Website" <${MAILBOX}>`,
 
-    to: process.env.EMAIL_USER,
+    to: MAILBOX,
 
     replyTo: work_email,
 
@@ -245,15 +325,15 @@ try {
     text: `
 NEW KLEZMER WEBSITE ENQUIRY
 
-Name: ${full_name}
-Organisation: ${organisation}
-Email: ${work_email}
-Telephone: ${telephone || "Not provided"}
-Service: ${service}
-Preferred Contact Method: ${contact_method}
+Name: ${escapeHtml(full_name)}
+Organisation: ${escapeHtml(organisation)}
+Email: ${escapeHtml(work_email)}
+Telephone: ${escapeHtml(telephone || "Not provided")}
+Service: ${escapeHtml(service)}
+Preferred Contact Method: ${escapeHtml(contact_method)}
 
 Message:
-${message}
+${escapeHtml(message)}
     `,
 
     // HTML email
@@ -477,7 +557,7 @@ ${message}
                                         border-bottom:1px solid #e5eaf1;
                                     ">
 
-                                        ${full_name}
+                                        ${escapeHtml(full_name)}
 
                                     </td>
 
@@ -507,7 +587,7 @@ ${message}
                                         border-bottom:1px solid #e5eaf1;
                                     ">
 
-                                        ${organisation}
+                                        ${escapeHtml(organisation)}
 
                                     </td>
 
@@ -536,7 +616,7 @@ ${message}
                                         border-bottom:1px solid #e5eaf1;
                                     ">
 
-                                        ${work_email}
+                                        ${escapeHtml(work_email)}
 
                                     </td>
 
@@ -563,7 +643,7 @@ ${message}
                                         font-size:14px;
                                     ">
 
-                                        ${telephone || "Not provided"}
+                                        ${escapeHtml(telephone) || "Not provided"}
 
                                     </td>
 
@@ -609,7 +689,7 @@ ${message}
                                 font-weight:700;
                             ">
 
-                                ${service}
+                                ${escapeHtml(service)}
 
                             </div>
 
@@ -644,7 +724,7 @@ ${message}
                                 font-size:14px;
                             ">
 
-                                ${contact_method}
+                                ${escapeHtml(contact_method)}
 
                             </div>
 
@@ -685,7 +765,7 @@ ${message}
                                 line-height:1.7;
                             ">
 
-                                ${message}
+                                ${escapeHtml(message)}
 
                             </div>
 
@@ -746,7 +826,7 @@ ${message}
     attachments: [
         {
             filename: "Logo.png",
-            path: "../assets/images/Logo.png",
+            path: path.join(__dirname, "..", "assets", "images", "Logo.png"),
             cid: "klezmer-logo"
         }
     ]
@@ -770,6 +850,27 @@ ${message}
 // ================================
 // START SERVER
 // ================================
+
+// ================================
+// GLOBAL ERROR HANDLER
+// ================================
+
+app.use((err, req, res, next) => {
+
+    if (err.type === "entity.too.large") {
+        return res.status(413).send(
+            "Request is too large. Please shorten your message and try again."
+        );
+    }
+
+    console.error(err);
+
+    res.status(500).send(
+        "Something went wrong. Please try again later."
+    );
+
+});
+
 app.listen(PORT, () => {
     console.log(`Klezmer server running at http://localhost:${PORT}`);
 });
